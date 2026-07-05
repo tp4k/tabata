@@ -1,0 +1,12 @@
+- main [ref=e2]:
+  - heading "Tabata Timer" [level=1] [ref=e3]
+  - generic [ref=e4]:
+    - generic [ref=e5]: Laps
+    - spinbutton "Laps" [ref=e6]: "8"
+  - generic [ref=e7]:
+    - generic [ref=e8]: Work (seconds)
+    - spinbutton "Work (seconds)" [ref=e9]: "20"
+  - generic [ref=e10]:
+    - generic [ref=e11]: Rest (seconds)
+    - spinbutton "Rest (seconds)" [ref=e12]: "10"
+  - button "Start" [ref=e13] [cursor=pointer]

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Tabata Timer</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#111111">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon-180.png">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main id="config-screen">
+    <h1>Tabata Timer</h1>
+    <div class="field">
+      <label for="input-laps">Laps</label>
+      <input id="input-laps" type="number" min="1" max="99" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label for="input-work">Work (seconds)</label>
+      <input id="input-work" type="number" min="5" max="600" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label for="input-rest">Rest (seconds)</label>
+      <input id="input-rest" type="number" min="0" max="600" inputmode="numeric">
+    </div>
+    <button id="start-button" type="button">Start</button>
+  </main>
+
+  <main id="active-screen" class="hidden">
+    <div id="phase-label">GET READY</div>
+    <div id="countdown">0</div>
+    <div id="lap-indicator"></div>
+    <div class="controls">
+      <button id="pause-button" type="button">Pause</button>
+      <button id="stop-button" type="button">Stop</button>
+    </div>
+  </main>
+
+  <script src="./app.js" defer></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js', { scope: './' }).catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
