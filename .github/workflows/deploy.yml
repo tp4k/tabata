@@ -1,0 +1,45 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+# Least-privilege token scopes required by the Pages deploy actions.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race; a newer push supersedes an in-flight one.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Stamp cache version into service worker
+        run: |
+          sed -i "s|const CACHE_NAME = \".*\";|const CACHE_NAME = \"tabata-cache-${GITHUB_SHA}\";|" service-worker.js
+          echo "CACHE_NAME -> tabata-cache-${GITHUB_SHA}"
+          grep CACHE_NAME service-worker.js | head -1
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
