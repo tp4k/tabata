@@ -16,7 +16,7 @@
   const REST_MIN = 0;
   const REST_MAX = 600;
 
-  const GET_READY_SECONDS = 3;
+  const GET_READY_SECONDS = 5;
   const LEAD_IN_SECONDS = 0.1;
 
   const SCHEDULER_TICK_MS = 25;
@@ -26,21 +26,28 @@
 
   const COUNTDOWN_BEEP_FREQ = 880;
   const LAP_START_FREQ = 587.33;
-  const FINAL_CHORD_FREQS = [523.25, 659.25, 783.99];
+  const FANFARE_RISE_FREQS = [523.25, 659.25, 783.99];
+  const FANFARE_CHORD_FREQS = [523.25, 659.25, 783.99, 1046.5];
 
   const BEEP_DURATION = 0.12;
   const LAP_START_DURATION = 0.25;
-  const FINAL_CHORD_DURATION = 1.2;
+  const FANFARE_NOTE_INTERVAL_SECONDS = 0.12;
+  const FANFARE_NOTE_DURATION = 0.18;
+  const FANFARE_CHORD_DURATION = 0.9;
 
   const BEEP_GAIN = 0.3;
   const LAP_START_GAIN = 0.35;
-  const FINAL_CHORD_GAIN = 0.25;
+  const FANFARE_NOTE_GAIN = 0.3;
+  const FANFARE_CHORD_GAIN = 0.28;
 
   const ENVELOPE_ATTACK_SECONDS = 0.005;
   const ENVELOPE_RELEASE_SECONDS = 0.03;
   const ENVELOPE_TAIL_SECONDS = 0.02;
 
   const DONE_DISPLAY_MS = 2500;
+
+  const PAUSE_BUTTON_LABEL = '❙❙ Pause';
+  const RESUME_BUTTON_LABEL = '▶ Resume';
 
   const PHASE_GET_READY = 'getReady';
   const PHASE_WORK = 'work';
@@ -76,6 +83,12 @@
   const phaseLabelEl = document.getElementById('phase-label');
   const countdownEl = document.getElementById('countdown');
   const lapIndicatorEl = document.getElementById('lap-indicator');
+  const progressBarWrapEl = document.getElementById('progress-bar-wrap');
+  const progressFillEl = document.getElementById('progress-fill');
+  const stopConfirmEl = document.getElementById('stop-confirm');
+  const stopConfirmSubEl = document.getElementById('stop-confirm-sub');
+  const keepGoingButtonEl = document.getElementById('keep-going-button');
+  const endWorkoutButtonEl = document.getElementById('end-workout-button');
 
   let audioCtx = null;
   let config = { laps: DEFAULT_LAPS, work: DEFAULT_WORK, rest: DEFAULT_REST };
@@ -90,6 +103,7 @@
   let isRunning = false;
   let isPaused = false;
   let completionTriggered = false;
+  let stopConfirmTriggeredPause = false;
 
   let schedulerTimerId = null;
   let rafId = null;
@@ -223,7 +237,12 @@
     } else if (evt.kind === EVENT_KIND_LAP_START) {
       scheduleTone(LAP_START_FREQ, evt.time, LAP_START_DURATION, LAP_START_GAIN);
     } else if (evt.kind === EVENT_KIND_FINAL) {
-      scheduleTone(FINAL_CHORD_FREQS, evt.time, FINAL_CHORD_DURATION, FINAL_CHORD_GAIN);
+      FANFARE_RISE_FREQS.forEach((freq, index) => {
+        const noteTime = evt.time + index * FANFARE_NOTE_INTERVAL_SECONDS;
+        scheduleTone(freq, noteTime, FANFARE_NOTE_DURATION, FANFARE_NOTE_GAIN);
+      });
+      const chordTime = evt.time + FANFARE_RISE_FREQS.length * FANFARE_NOTE_INTERVAL_SECONDS;
+      scheduleTone(FANFARE_CHORD_FREQS, chordTime, FANFARE_CHORD_DURATION, FANFARE_CHORD_GAIN);
     }
   }
 
@@ -302,9 +321,12 @@
 
     const lapKey = (phase.type === PHASE_WORK || phase.type === PHASE_REST) ? phase.lap : NON_LAP_PHASE_KEY;
     if (lapKey !== lastRenderedLapKey) {
-      lapIndicatorEl.textContent = lapKey === NON_LAP_PHASE_KEY ? '' : `Lap ${lapKey} / ${config.laps}`;
+      lapIndicatorEl.textContent = lapKey === NON_LAP_PHASE_KEY ? '' : `LAP ${lapKey} / ${config.laps}`;
       lastRenderedLapKey = lapKey;
     }
+
+    const fraction = Math.max(0, Math.min(1, remaining / duration));
+    progressFillEl.style.transform = `scaleX(${fraction})`;
   }
 
   function rafLoop() {
@@ -331,7 +353,9 @@
     configScreenEl.classList.add('hidden');
     activeScreenEl.classList.remove('hidden');
     activeScreenEl.className = PHASE_CSS_CLASS[PHASE_GET_READY];
-    pauseButtonEl.textContent = 'Pause';
+    pauseButtonEl.textContent = PAUSE_BUTTON_LABEL;
+    progressBarWrapEl.classList.remove('hidden');
+    hideStopConfirm();
   }
 
   function showDoneState() {
@@ -339,6 +363,24 @@
     phaseLabelEl.textContent = PHASE_LABEL_TEXT[PHASE_DONE];
     countdownEl.textContent = '';
     lapIndicatorEl.textContent = '';
+    progressBarWrapEl.classList.add('hidden');
+  }
+
+  function computeStopConfirmSubtitle() {
+    const phase = phases[currentPhaseIndex];
+    if (phase && (phase.type === PHASE_WORK || phase.type === PHASE_REST)) {
+      return `You're on lap ${phase.lap} of ${config.laps}`;
+    }
+    return '';
+  }
+
+  function showStopConfirm() {
+    stopConfirmSubEl.textContent = computeStopConfirmSubtitle();
+    stopConfirmEl.classList.remove('hidden');
+  }
+
+  function hideStopConfirm() {
+    stopConfirmEl.classList.add('hidden');
   }
 
   async function acquireWakeLock() {
@@ -400,7 +442,7 @@
       rafId = null;
     }
     silencePendingNodes();
-    pauseButtonEl.textContent = 'Resume';
+    pauseButtonEl.textContent = RESUME_BUTTON_LABEL;
   }
 
   function resumeWorkout() {
@@ -423,7 +465,7 @@
     lastRenderedLapKey = null;
 
     isPaused = false;
-    pauseButtonEl.textContent = 'Pause';
+    pauseButtonEl.textContent = PAUSE_BUTTON_LABEL;
     startSchedulerLoop();
     rafId = requestAnimationFrame(rafLoop);
   }
@@ -446,7 +488,8 @@
 
     silencePendingNodes();
     releaseWakeLock();
-    pauseButtonEl.textContent = 'Pause';
+    pauseButtonEl.textContent = PAUSE_BUTTON_LABEL;
+    hideStopConfirm();
     showConfigScreen();
   }
 
@@ -484,6 +527,24 @@
     };
   }
 
+  function persistInputFields() {
+    saveConfig(readConfigFromInputs());
+  }
+
+  function commitConfigInput(inputEl, min, max, fallback) {
+    inputEl.value = String(clampInt(inputEl.value, min, max, fallback));
+    persistInputFields();
+  }
+
+  function setupConfigInput(inputEl, min, max, fallback) {
+    inputEl.addEventListener('change', () => {
+      commitConfigInput(inputEl, min, max, fallback);
+    });
+    inputEl.addEventListener('blur', () => {
+      commitConfigInput(inputEl, min, max, fallback);
+    });
+  }
+
   startButtonEl.addEventListener('click', () => {
     config = readConfigFromInputs();
     applyConfigToInputs(config);
@@ -504,8 +565,33 @@
   });
 
   stopButtonEl.addEventListener('click', () => {
+    if (!isRunning) {
+      return;
+    }
+    stopConfirmTriggeredPause = !isPaused;
+    if (!isPaused) {
+      pauseWorkout();
+    }
+    showStopConfirm();
+  });
+
+  keepGoingButtonEl.addEventListener('click', () => {
+    hideStopConfirm();
+    if (stopConfirmTriggeredPause) {
+      resumeWorkout();
+    }
+    stopConfirmTriggeredPause = false;
+  });
+
+  endWorkoutButtonEl.addEventListener('click', () => {
+    hideStopConfirm();
+    stopConfirmTriggeredPause = false;
     stopWorkout();
   });
+
+  setupConfigInput(lapsInputEl, LAPS_MIN, LAPS_MAX, DEFAULT_LAPS);
+  setupConfigInput(workInputEl, WORK_MIN, WORK_MAX, DEFAULT_WORK);
+  setupConfigInput(restInputEl, REST_MIN, REST_MAX, DEFAULT_REST);
 
   config = loadConfig();
   applyConfigToInputs(config);

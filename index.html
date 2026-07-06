@@ -6,36 +6,53 @@
   <title>Tabata Timer</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#111111">
+  <meta name="theme-color" content="#0e0f12">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon-180.png">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
   <main id="config-screen">
-    <h1>Tabata Timer</h1>
-    <div class="field">
-      <label for="input-laps">Laps</label>
-      <input id="input-laps" type="number" min="1" max="99" inputmode="numeric">
+    <h1 class="app-title">Tabata</h1>
+    <div class="fields">
+      <div class="field">
+        <label for="input-laps">Laps</label>
+        <input id="input-laps" class="number-input" type="number" min="1" max="99" inputmode="numeric">
+      </div>
+      <div class="field">
+        <label for="input-work">Work · sec</label>
+        <input id="input-work" class="number-input" type="number" min="5" max="600" inputmode="numeric">
+      </div>
+      <div class="field">
+        <label for="input-rest">Rest · sec</label>
+        <input id="input-rest" class="number-input" type="number" min="0" max="600" inputmode="numeric">
+      </div>
     </div>
-    <div class="field">
-      <label for="input-work">Work (seconds)</label>
-      <input id="input-work" type="number" min="5" max="600" inputmode="numeric">
-    </div>
-    <div class="field">
-      <label for="input-rest">Rest (seconds)</label>
-      <input id="input-rest" type="number" min="0" max="600" inputmode="numeric">
-    </div>
-    <button id="start-button" type="button">Start</button>
+    <button id="start-button" type="button" class="start-button">▶ Start workout</button>
   </main>
 
   <main id="active-screen" class="hidden">
-    <div id="phase-label">GET READY</div>
-    <div id="countdown">0</div>
-    <div id="lap-indicator"></div>
+    <div class="top-row">
+      <div id="phase-label" class="phase-label">GET READY</div>
+      <div id="lap-indicator" class="lap-indicator"></div>
+    </div>
+    <div class="hero">
+      <div id="countdown" class="countdown">0</div>
+    </div>
+    <div id="progress-bar-wrap" class="bar-wrap">
+      <div class="track"><i id="progress-fill"></i></div>
+    </div>
     <div class="controls">
-      <button id="pause-button" type="button">Pause</button>
-      <button id="stop-button" type="button">Stop</button>
+      <button id="pause-button" type="button" class="btn btn-pause">❙❙ Pause</button>
+      <button id="stop-button" type="button" class="btn btn-stop">✕ Stop</button>
+    </div>
+    <div id="stop-confirm" class="stop-confirm hidden">
+      <div class="stop-confirm-question">End workout?</div>
+      <div id="stop-confirm-sub" class="stop-confirm-sub"></div>
+      <div class="stop-confirm-row">
+        <button id="keep-going-button" type="button" class="btn btn-keep">▶ Keep going</button>
+        <button id="end-workout-button" type="button" class="btn btn-end">✕ End workout</button>
+      </div>
     </div>
   </main>
 
